@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 帖子类型枚举
+enum PostType {
+  SHORT   // 短内容（推文样式）
+  ARTICLE // 长文章
+}
+
+// 用户角色枚举
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// 用户表
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // bcrypt加密
+  name      String?
+  avatar    String?
+  bio       String?
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  posts Post[]
+
+  @@map("users")
+}
+
+// 标签表
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  // 多对多关联
+  posts Post[]
+
+  @@map("tags")
+}
+
+// 帖子表
+model Post {
+  id           String   @id @default(cuid())
+  type         PostType
+  slug         String   @unique
+  title        String?
+  contentMD    String   @db.Text // Markdown原文
+  contentHTML  String   @db.Text // 渲染后的HTML
+  excerpt      String?  @db.Text // 摘要
+  coverImage   String?  // 封面图
+  images       String[] // 图片列表（用于SHORT类型）
+  published    Boolean  @default(false)
+  publishedAt  DateTime?
+  likeCount    Int      @default(0)
+  viewCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 外键关联
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // 多对多关联标签
+  tags Tag[]
+
+  @@index([published, publishedAt])
+  @@index([type, published])
+  @@index([slug])
+  @@map("posts")
+}
