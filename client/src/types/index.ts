@@ -44,6 +44,7 @@ export interface PostListItem {
   coverImage: string | null
   images: string[]
   publishedAt: string | null
+  createdAt: string
   likeCount: number
   tags: Tag[]
   author: Author

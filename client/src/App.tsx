@@ -4,9 +4,12 @@ import { useAuthStore } from '@/store/useStore'
 // 页面导入
 import Home from '@/pages/Home'
 import Post from '@/pages/Post'
+import Tag from '@/pages/Tag'
 import AdminLogin from '@/pages/AdminLogin'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminEditor from '@/pages/AdminEditor'
+import AdminPostList from '@/pages/AdminPostList'
+import AdminTagList from '@/pages/AdminTagList'
 
 /**
  * 受保护路由组件
@@ -14,23 +17,24 @@ import AdminEditor from '@/pages/AdminEditor'
  */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
   }
-  
+
   return <>{children}</>
 }
 
 /**
  * 主应用组件
- * 
+ *
  * 路由配置：
  * - / - 首页（Feed流）
  * - /post/:slug - 文章详情
  * - /admin/login - 管理员登录
  * - /admin/dashboard - 管理仪表盘（需登录）
- * - /admin/editor - 文章编辑器（需登录）
+ * - /admin/posts - 文章列表管理（需登录）
+ * - /admin/editor - 新建文章（需登录）
  * - /admin/editor/:id - 编辑文章（需登录）
  */
 function App() {
@@ -40,7 +44,8 @@ function App() {
         {/* 公开路由 */}
         <Route path="/" element={<Home />} />
         <Route path="/post/:slug" element={<Post />} />
-        
+        <Route path="/tag/:slug" element={<Tag />} />
+
         {/* 管理后台路由 */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
@@ -48,6 +53,22 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/posts"
+          element={
+            <ProtectedRoute>
+              <AdminPostList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/tags"
+          element={
+            <ProtectedRoute>
+              <AdminTagList />
             </ProtectedRoute>
           }
         />
@@ -67,7 +88,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* 404重定向 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

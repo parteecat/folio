@@ -1,4 +1,14 @@
 import { useAuthStore } from '@/store/useStore'
+import type {
+  LoginResponse,
+  PaginatedResponse,
+  PostListItem,
+  PostDetail,
+  LikeResponse,
+  Tag,
+  UploadResponse,
+  Stats,
+} from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
@@ -168,37 +178,51 @@ export const apiClient = new ApiClient(API_BASE_URL)
 export const api = {
   // 认证
   auth: {
-    login: (email: string, password: string) =>
+    login: (email: string, password: string): Promise<LoginResponse> =>
       apiClient.post('/api/admin/login', { email, password }),
-    refresh: () => apiClient.post('/api/admin/refresh'),
+    refresh: (): Promise<{ accessToken: string }> =>
+      apiClient.post('/api/admin/refresh'),
   },
 
   // 帖子
   posts: {
-    list: (params?: { cursor?: string; type?: string; limit?: string }) =>
+    list: (params?: { cursor?: string; type?: string; limit?: string }): Promise<PaginatedResponse<PostListItem>> =>
       apiClient.get('/api/posts', params),
-    get: (slug: string) => apiClient.get(`/api/posts/${slug}`),
-    like: (id: string) => apiClient.post(`/api/posts/${id}/like`),
+    get: (slug: string): Promise<PostDetail> =>
+      apiClient.get(`/api/posts/${slug}`),
+    like: (id: string): Promise<LikeResponse> =>
+      apiClient.post(`/api/posts/${id}/like`),
   },
 
   // 标签
   tags: {
-    list: () => apiClient.get('/api/tags'),
+    list: (): Promise<Array<Tag & { _count?: { posts: number } }>> =>
+      apiClient.get('/api/tags'),
+    create: (data: { name: string; slug: string }): Promise<Tag> =>
+      apiClient.post('/api/admin/tags', data),
+    delete: (id: string) =>
+      apiClient.delete(`/api/admin/tags/${id}`),
   },
 
   // 搜索
-  search: (q: string) => apiClient.get('/api/search', { q }),
+  search: (q: string): Promise<PaginatedResponse<PostListItem>> =>
+    apiClient.get('/api/search', { q }),
 
   // 管理
   admin: {
-    getPosts: () => apiClient.get('/api/admin/posts'),
-    createPost: (data: unknown) => apiClient.post('/api/admin/posts', data),
+    getPosts: (): Promise<PostListItem[]> =>
+      apiClient.get('/api/admin/posts'),
+    createPost: (data: unknown) =>
+      apiClient.post('/api/admin/posts', data),
     updatePost: (id: string, data: unknown) =>
       apiClient.put(`/api/admin/posts/${id}`, data),
-    deletePost: (id: string) => apiClient.delete(`/api/admin/posts/${id}`),
-    getStats: () => apiClient.get('/api/admin/stats'),
+    deletePost: (id: string) =>
+      apiClient.delete(`/api/admin/posts/${id}`),
+    getStats: (): Promise<Stats> =>
+      apiClient.get('/api/admin/stats'),
   },
 
   // 上传
-  upload: (file: File) => apiClient.upload('/api/upload', file),
+  upload: (file: File): Promise<UploadResponse> =>
+    apiClient.upload('/api/upload', file),
 }
