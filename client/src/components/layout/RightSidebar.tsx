@@ -1,10 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { TrendingUp, Clock, Heart } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { api } from '@/api/client'
-import { useFeedStore } from '@/store/useStore'
 import { formatRelativeTime } from '@/lib/utils'
 import type { PostListItem } from '@/types'
 
@@ -57,14 +56,21 @@ function ProfileCard() {
  * 最近文章列表
  */
 function RecentPosts() {
-  const { posts, setPosts } = useFeedStore()
+  const [recentPosts, setRecentPosts] = useState<PostListItem[]>([])
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    // 防止重复请求（React 严格模式）
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // 获取最近5篇文章
     api.posts.list({ limit: '5' }).then((response) => {
-      setPosts(response.data)
+      setRecentPosts(response.data)
+    }).catch((error) => {
+      console.error('Failed to load recent posts:', error)
     })
-  }, [setPosts])
+  }, [])
 
   return (
     <Card>
@@ -76,9 +82,12 @@ function RecentPosts() {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
-          {posts.slice(0, 5).map((post) => (
+          {recentPosts.slice(0, 5).map((post) => (
             <PostListItem key={post.id} post={post} />
           ))}
+          {recentPosts.length === 0 && (
+            <p className="text-sm text-muted-foreground">暂无文章</p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -89,14 +98,21 @@ function RecentPosts() {
  * 热门文章列表
  */
 function TrendingPosts() {
-  const [posts, setPosts] = useState<PostListItem[]>([])
+  const [trendingPosts, setTrendingPosts] = useState<PostListItem[]>([])
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    // 防止重复请求（React 严格模式）
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // 获取点赞最多的文章
     api.posts.list({ limit: '5' }).then((response) => {
       // 按点赞数排序
       const sorted = [...response.data].sort((a, b) => b.likeCount - a.likeCount)
-      setPosts(sorted)
+      setTrendingPosts(sorted)
+    }).catch((error) => {
+      console.error('Failed to load trending posts:', error)
     })
   }, [])
 
@@ -110,9 +126,12 @@ function TrendingPosts() {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
-          {posts.slice(0, 5).map((post) => (
+          {trendingPosts.slice(0, 5).map((post) => (
             <PostListItem key={post.id} post={post} showLikes />
           ))}
+          {trendingPosts.length === 0 && (
+            <p className="text-sm text-muted-foreground">暂无文章</p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -153,11 +172,9 @@ function PostListItem({
   )
 }
 
-import { useState } from 'react'
-
 /**
  * 右侧边栏
- * 
+ *
  * 包含：
  * - 个人资料展示
  * - 最近文章列表
