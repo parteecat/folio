@@ -1,11 +1,13 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { compare, hash } from 'bcryptjs'
-import { sign, verify } from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma.js'
 import { jwtAuth } from '../middleware/jwtAuth.js'
 import type { LoginBody, LoginResponse, CreatePostBody, UpdatePostBody } from '../types.js'
+
+const { sign, verify } = jwt
 
 const admin = new Hono()
 
@@ -46,7 +48,7 @@ admin.post('/login', zValidator('json', loginSchema), async (c) => {
     return c.json({ error: 'Invalid credentials' }, 401)
   }
 
-  const isValid = await compare(password, user.password)
+  const isValid = await bcrypt.compare(password, user.password)
   if (!isValid) {
     return c.json({ error: 'Invalid credentials' }, 401)
   }

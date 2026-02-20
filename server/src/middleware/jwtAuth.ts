@@ -1,6 +1,8 @@
 import type { MiddlewareHandler } from 'hono'
-import { verify } from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 import type { JWTPayload } from '../types'
+
+const { verify } = jwt
 
 /**
  * JWT认证中间件
