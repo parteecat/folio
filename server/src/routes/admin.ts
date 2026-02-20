@@ -169,13 +169,16 @@ admin.post('/posts', zValidator('json', createPostSchema), async (c) => {
     return c.json({ error: 'Slug already exists' }, 409)
   }
 
+  // 排除 tagIds，它不是 Prisma 模型字段
+  const { tagIds, ...postData } = data
+
   const post = await prisma.post.create({
     data: {
-      ...data,
+      ...postData,
       authorId: user.userId,
       publishedAt: data.published ? new Date() : null,
       tags: {
-        connect: data.tagIds?.map(id => ({ id })) || [],
+        connect: tagIds?.map(id => ({ id })) || [],
       },
     },
     include: {

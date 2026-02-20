@@ -12,6 +12,7 @@ const posts = new Hono()
 const listQuerySchema = z.object({
   cursor: z.string().optional(),
   type: z.enum(['SHORT', 'ARTICLE']).optional(),
+  tag: z.string().optional(),
   limit: z.string().transform(Number).default('10'),
 })
 
@@ -21,13 +22,20 @@ const listQuerySchema = z.object({
  * 支持分页、类型筛选
  */
 posts.get('/', zValidator('query', listQuerySchema), async (c) => {
-  const { cursor, type, limit } = c.req.valid('query')
+  const { cursor, type, tag, limit } = c.req.valid('query')
   const take = Math.min(limit, 20) // 最大20条
 
   const posts = await prisma.post.findMany({
     where: {
       published: true,
       ...(type && { type }),
+      ...(tag && {
+        tags: {
+          some: {
+            slug: tag,
+          },
+        },
+      }),
       ...(cursor && {
         publishedAt: {
           lt: new Date(cursor),
@@ -80,56 +88,94 @@ posts.get('/', zValidator('query', listQuerySchema), async (c) => {
 
 /**
  * GET /api/posts/:slug
- * 获取单篇帖子详情
+ * 获取单篇帖子详情（支持 slug 或 id）
  */
 posts.get('/:slug', async (c) => {
-  const slug = c.req.param('slug')
+  const slugOrId = c.req.param('slug')
+  const isId = slugOrId.includes('c') // 简单判断是否是 cuid
 
-  const post = await prisma.post.findUnique({
-    where: { slug },
-    select: {
-      id: true,
-      type: true,
-      slug: true,
-      title: true,
-      contentMD: true,
-      contentHTML: true,
-      excerpt: true,
-      coverImage: true,
-      images: true,
-      publishedAt: true,
-      likeCount: true,
-      viewCount: true,
-      createdAt: true,
-      updatedAt: true,
-      tags: {
+  // 先尝试通过 slug 查询，失败则通过 id 查询
+  let post = isId
+    ? await prisma.post.findUnique({
+        where: { id: slugOrId },
         select: {
           id: true,
-          name: true,
+          type: true,
           slug: true,
+          title: true,
+          contentMD: true,
+          contentHTML: true,
+          excerpt: true,
+          coverImage: true,
+          images: true,
+          publishedAt: true,
+          likeCount: true,
+          viewCount: true,
+          createdAt: true,
+          updatedAt: true,
+          tags: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
+          },
         },
-      },
-      author: {
+      })
+    : await prisma.post.findUnique({
+        where: { slug: slugOrId },
         select: {
           id: true,
-          name: true,
-          avatar: true,
+          type: true,
+          slug: true,
+          title: true,
+          contentMD: true,
+          contentHTML: true,
+          excerpt: true,
+          coverImage: true,
+          images: true,
+          publishedAt: true,
+          likeCount: true,
+          viewCount: true,
+          createdAt: true,
+          updatedAt: true,
+          tags: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
+          },
         },
-      },
-    },
-  })
+      })
 
-  if (!post || !post.publishedAt) {
+  if (!post) {
     return c.json({ error: 'Post not found' }, 404)
   }
 
-  // 异步增加浏览量（不阻塞响应）
-  prisma.post.update({
-    where: { id: post.id },
-    data: { viewCount: { increment: 1 } },
-  }).catch(() => {
-    // 忽略浏览量更新失败
-  })
+  // 只有公开文章才增加浏览量
+  if (post.publishedAt) {
+    prisma.post.update({
+      where: { id: post.id },
+      data: { viewCount: { increment: 1 } },
+    }).catch(() => {
+      // 忽略浏览量更新失败
+    })
+  }
 
   return c.json(post as PostDetail)
 })
@@ -162,77 +208,6 @@ posts.post('/:id/like', async (c) => {
     likeCount: updated.likeCount,
     liked: true,
   } as LikeResponse)
-})
-
-/**
- * GET /api/tags
- * 获取所有标签
- */
-posts.get('/tags', async (c) => {
-  const tags = await prisma.tag.findMany({
-    orderBy: { name: 'asc' },
-    include: {
-      _count: {
-        select: { posts: true },
-      },
-    },
-  })
-
-  return c.json(tags)
-})
-
-/**
- * GET /api/search?q=
- * 搜索帖子
- */
-posts.get('/search', async (c) => {
-  const q = c.req.query('q')
-  
-  if (!q || q.trim().length < 2) {
-    return c.json({ data: [], hasMore: false })
-  }
-
-  const posts = await prisma.post.findMany({
-    where: {
-      published: true,
-      OR: [
-        { title: { contains: q, mode: 'insensitive' } },
-        { excerpt: { contains: q, mode: 'insensitive' } },
-        { contentMD: { contains: q, mode: 'insensitive' } },
-      ],
-    },
-    take: 20,
-    orderBy: { publishedAt: 'desc' },
-    select: {
-      id: true,
-      type: true,
-      slug: true,
-      title: true,
-      excerpt: true,
-      coverImage: true,
-      publishedAt: true,
-      likeCount: true,
-      tags: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
-      },
-      author: {
-        select: {
-          id: true,
-          name: true,
-          avatar: true,
-        },
-      },
-    },
-  })
-
-  return c.json({
-    data: posts as PostListItem[],
-    hasMore: false,
-  })
 })
 
 export default posts

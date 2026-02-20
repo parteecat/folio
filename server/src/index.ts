@@ -56,8 +56,98 @@ app.get('/health', (c) => {
  */
 // 公开接口
 app.route('/api/posts', posts)
-app.route('/api/tags', posts)
-app.route('/api/search', posts)
+app.get('/api/tags', async (c) => {
+  const { prisma } = await import('./lib/prisma.js')
+  const tags = await prisma.tag.findMany({
+    orderBy: { name: 'asc' },
+    include: {
+      _count: {
+        select: { posts: true },
+      },
+    },
+  })
+  return c.json(tags)
+})
+
+// 标签管理API（需要认证）
+app.post('/api/admin/tags', async (c) => {
+  const { name, slug } = await c.req.json()
+  
+  if (!name || !slug) {
+    return c.json({ error: 'Name and slug are required' }, 400)
+  }
+
+  const { prisma } = await import('./lib/prisma.js')
+  
+  // 检查slug是否已存在
+  const existing = await prisma.tag.findUnique({ where: { slug } })
+  if (existing) {
+    return c.json({ error: 'Slug already exists' }, 409)
+  }
+
+  const tag = await prisma.tag.create({
+    data: { name, slug },
+  })
+  return c.json(tag, 201)
+})
+
+app.delete('/api/admin/tags/:id', async (c) => {
+  const id = c.req.param('id')
+  const { prisma } = await import('./lib/prisma.js')
+
+  await prisma.tag.delete({ where: { id } })
+  return c.json({ success: true })
+})
+app.get('/api/search', async (c) => {
+  const q = c.req.query('q')
+
+  if (!q || q.trim().length < 2) {
+    return c.json({ data: [], hasMore: false })
+  }
+
+  const { prisma } = await import('./lib/prisma.js')
+  const posts = await prisma.post.findMany({
+    where: {
+      published: true,
+      OR: [
+        { title: { contains: q, mode: 'insensitive' } },
+        { excerpt: { contains: q, mode: 'insensitive' } },
+        { contentMD: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    take: 20,
+    orderBy: { publishedAt: 'desc' },
+    select: {
+      id: true,
+      type: true,
+      slug: true,
+      title: true,
+      excerpt: true,
+      coverImage: true,
+      publishedAt: true,
+      likeCount: true,
+      tags: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      author: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+        },
+      },
+    },
+  })
+
+  return c.json({
+    data: posts,
+    hasMore: false,
+  })
+})
 
 // 管理接口
 app.route('/api/admin', admin)
