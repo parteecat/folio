@@ -137,7 +137,7 @@ export function TipTapEditor({
         lowlight,
         defaultLanguage: 'javascript',
         HTMLAttributes: {
-          class: 'bg-muted rounded-lg p-4 font-mono text-sm',
+          class: 'rounded-lg p-4 font-mono text-sm bg-[#0d1117] text-[#c9d1d9] border border-[#30363d]',
         },
       }),
       TaskList,

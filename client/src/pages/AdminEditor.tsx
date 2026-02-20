@@ -1,29 +1,38 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save, Eye, FileText, FileCode, Image as ImageIcon, Tag } from 'lucide-react'
+import { ArrowLeft, Eye, Type } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TipTapEditor } from '@/components/editor/TipTapEditor'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import { ImageUpload } from '@/components/editor/ImageUpload'
 import { api } from '@/api/client'
 import { generateSlug } from '@/lib/utils'
 import { PostType } from '@/types'
+import TurndownService from 'turndown'
+
+// 配置 turndown - HTML 转 Markdown
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-',
+})
+
+// HTML 转 Markdown
+const htmlToMd = (html: string): string => {
+  if (!html) return ''
+  return turndownService.turndown(html)
+}
 
 /**
- * 文章编辑器页面
+ * 文章编辑器页面（左右布局）
  *
- * 功能：
- * - TipTap富文本编辑（可视化模式）
- * - Markdown源码模式
- * - 元数据设置（标题、slug、标签、封面等）
- * - 发布状态切换
- * - 图片拖拽上传
- * - 从Obsidian/Typora粘贴Markdown自动转换
+ * 布局：
+ * - 左侧：标题 + 编辑器
+ * - 右侧：设置面板（常驻显示）
  */
 export default function AdminEditor() {
   const navigate = useNavigate()
@@ -37,18 +46,15 @@ export default function AdminEditor() {
   const [excerpt, setExcerpt] = useState('')
   const [coverImage, setCoverImage] = useState('')
   const [contentHTML, setContentHTML] = useState('')
-  const [contentMD, setContentMD] = useState('')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [isPublished, setIsPublished] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [editorMode, setEditorMode] = useState<'visual' | 'markdown'>('visual')
 
   // 加载已有文章
   useEffect(() => {
     if (!id) return
 
-    // 获取单个文章详情
     api.posts
       .get(id)
       .then((post) => {
@@ -57,8 +63,7 @@ export default function AdminEditor() {
         setSlug(post.slug)
         setExcerpt(post.excerpt || '')
         setCoverImage(post.coverImage || '')
-        setContentHTML(post.contentHTML)
-        setContentMD(post.contentMD)
+        setContentHTML(post.contentHTML || '')
         setTags(post.tags.map((t) => t.name))
         setIsPublished(Boolean(post.publishedAt))
       })
@@ -77,13 +82,6 @@ export default function AdminEditor() {
   // 处理编辑器内容变化
   const handleEditorChange = useCallback((html: string) => {
     setContentHTML(html)
-  }, [])
-
-  // 处理Markdown编辑器变化
-  const handleMarkdownChange = useCallback((markdown: string) => {
-    setContentMD(markdown)
-    // 简单转换HTML（实际应该使用更好的库）
-    setContentHTML(markdown)
   }, [])
 
   // 处理图片上传
@@ -115,6 +113,9 @@ export default function AdminEditor() {
       return
     }
 
+    const finalExcerpt = excerpt || title
+    const contentMD = htmlToMd(contentHTML)
+
     setIsSaving(true)
 
     try {
@@ -122,7 +123,7 @@ export default function AdminEditor() {
         type,
         title,
         slug,
-        excerpt: excerpt || title,
+        excerpt: finalExcerpt,
         coverImage,
         contentMD,
         contentHTML,
@@ -147,19 +148,21 @@ export default function AdminEditor() {
   return (
     <div className="min-h-screen bg-background">
       {/* 顶部工具栏 */}
-      <header className="sticky top-0 z-10 border-b bg-background px-4 py-3">
+      <header className="sticky top-0 z-50 border-b bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/admin/dashboard')}
+              className="h-8 w-8"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-semibold">
+            <div className="h-4 w-px bg-border" />
+            <span className="text-sm text-muted-foreground">
               {isEditing ? '编辑文章' : '新建文章'}
-            </h1>
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -169,7 +172,6 @@ export default function AdminEditor() {
               onClick={() => handleSave(false)}
               disabled={isSaving}
             >
-              <Save className="mr-2 h-4 w-4" />
               保存草稿
             </Button>
             <Button
@@ -177,79 +179,55 @@ export default function AdminEditor() {
               onClick={() => handleSave(true)}
               disabled={isSaving}
             >
-              <Eye className="mr-2 h-4 w-4" />
-              {isPublished ? '更新发布' : '立即发布'}
+              <Eye className="mr-1.5 h-4 w-4" />
+              {isPublished ? '更新' : '发布'}
             </Button>
           </div>
         </div>
       </header>
 
-      {/* 编辑器主体 */}
+      {/* 主体内容 - 左右布局 */}
       <main className="mx-auto max-w-6xl p-4">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* 主编辑区 */}
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
+          {/* 左侧：编辑器区域 */}
+          <div className="space-y-4">
             {/* 标题输入 */}
             <Input
-              placeholder="文章标题"
+              placeholder="请输入文章标题..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="text-xl font-semibold"
+              className="border-0 bg-transparent px-0 text-2xl font-bold placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
 
-            {/* 编辑器模式切换 */}
-            <Tabs
-              value={editorMode}
-              onValueChange={(v) => setEditorMode(v as 'visual' | 'markdown')}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="visual" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  可视化编辑
-                </TabsTrigger>
-                <TabsTrigger value="markdown" className="gap-2">
-                  <FileCode className="h-4 w-4" />
-                  Markdown源码
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="visual" className="mt-4">
-                <TipTapEditor
-                  content={contentHTML}
-                  onChange={handleEditorChange}
-                  placeholder="开始写作...支持从Obsidian/Typora粘贴Markdown"
-                  onImageUpload={handleImageUpload}
-                />
-              </TabsContent>
-
-              <TabsContent value="markdown" className="mt-4">
-                <MarkdownEditor
-                  markdown={contentMD}
-                  onChange={handleMarkdownChange}
-                />
-              </TabsContent>
-            </Tabs>
+            {/* 编辑器 */}
+            <div className="min-h-[500px]">
+              <TipTapEditor
+                content={contentHTML}
+                onChange={handleEditorChange}
+                placeholder="开始写作...\n\n支持 Markdown 快捷键：\n# 标题  **粗体**  *斜体*  `代码`  ```代码块```\n\n还可以直接粘贴图片"
+                onImageUpload={handleImageUpload}
+              />
+            </div>
           </div>
 
-          {/* 侧边设置面板 */}
+          {/* 右侧：设置面板 */}
           <div className="space-y-4">
-            {/* 基本设置 */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">基本设置</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">文章设置</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 文章类型 */}
                 <div>
-                  <label className="text-sm font-medium">文章类型</label>
-                  <div className="mt-1.5 flex gap-2">
+                  <label className="mb-2 block text-xs text-muted-foreground">文章类型</label>
+                  <div className="flex gap-2">
                     <Button
                       variant={type === PostType.ARTICLE ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setType(PostType.ARTICLE)}
                       className="flex-1"
                     >
+                      <Type className="mr-1.5 h-3.5 w-3.5" />
                       长文章
                     </Button>
                     <Button
@@ -263,106 +241,100 @@ export default function AdminEditor() {
                   </div>
                 </div>
 
+                <Separator />
+
                 {/* Slug */}
                 <div>
-                  <label className="text-sm font-medium">Slug</label>
-                  <div className="mt-1.5 flex gap-2">
-                    <Input
-                      placeholder="article-slug"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    用于URL访问的唯一标识
-                  </p>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">Slug * </label>
+                  <Input
+                    placeholder="article-slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">URL 唯一标识</p>
                 </div>
+
+                <Separator />
 
                 {/* 摘要 */}
                 <div>
-                  <label className="text-sm font-medium">摘要</label>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">摘要</label>
                   <Textarea
-                    placeholder="文章摘要..."
+                    placeholder="文章摘要（默认同标题）"
                     value={excerpt}
                     onChange={(e) => setExcerpt(e.target.value)}
-                    className="mt-1.5 min-h-[80px]"
+                    className="min-h-[60px] resize-none text-sm"
                   />
                 </div>
 
+                <Separator />
+
+                {/* 封面图 */}
+                <div>
+                  <label className="mb-2 block text-xs text-muted-foreground">封面图</label>
+                  <ImageUpload
+                    value={coverImage}
+                    onChange={setCoverImage}
+                    onUpload={handleImageUpload}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* 标签 */}
+                <div>
+                  <label className="mb-2 block text-xs text-muted-foreground">标签</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="添加标签"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddTag()
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                    <Button size="sm" className="h-8 px-3" onClick={handleAddTag}>
+                      添加
+                    </Button>
+                  </div>
+
+                  {tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="cursor-pointer text-xs"
+                          onClick={() => handleRemoveTag(tag)}
+                        >
+                          {tag}
+                          <span className="ml-1">×</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
                 {/* 发布状态 */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="published" className="text-sm">
+                    立即发布
+                  </label>
                   <input
                     type="checkbox"
                     id="published"
                     checked={isPublished}
                     onChange={(e) => setIsPublished(e.target.checked)}
-                    className="h-4 w-4"
+                    className="h-4 w-4 rounded border-gray-300"
                   />
-                  <label htmlFor="published" className="text-sm font-medium">
-                    {isPublished ? '已发布' : '保存为草稿'}
-                  </label>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* 封面图 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ImageIcon className="h-4 w-4" />
-                  封面图
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ImageUpload
-                  value={coverImage}
-                  onChange={setCoverImage}
-                  onUpload={handleImageUpload}
-                />
-              </CardContent>
-            </Card>
-
-            {/* 标签 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Tag className="h-4 w-4" />
-                  标签
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="添加标签"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddTag()
-                      }
-                    }}
-                  />
-                  <Button size="sm" onClick={handleAddTag}>
-                    添加
-                  </Button>
-                </div>
-
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="cursor-pointer"
-                        onClick={() => handleRemoveTag(tag)}
-                      >
-                        {tag}
-                        <span className="ml-1 text-muted-foreground">×</span>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>

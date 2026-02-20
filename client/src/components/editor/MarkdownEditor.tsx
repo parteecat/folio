@@ -1,17 +1,18 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { FileCode, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { marked } from 'marked'
 
 interface MarkdownEditorProps {
   markdown: string
   onChange: (markdown: string) => void
-  onConvert?: (html: string) => void
 }
 
 /**
  * Markdown编辑器组件
  * 支持源码编辑和实时预览切换
+ * 使用 marked 库进行 Markdown 渲染
  */
 export function MarkdownEditor({
   markdown,
@@ -19,22 +20,11 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<'edit' | 'preview' | 'split'>('edit')
 
-  // 简单的Markdown转HTML（实际应用可用marked等库）
-  const markdownToHtml = useCallback((md: string): string => {
-    // 这里只是一个简单的转换示例
-    // 实际应该使用 marked、remark 等库
-    return md
-      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-      .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-      .replace(/\*(.*)\*/gim, '<em>$1</em>')
-      .replace(/`([^`]+)`/gim, '<code>$1</code>')
-      .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-      .replace(/^\- (.*$)/gim, '<li>$1</li>')
-      .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
-      .replace(/\n/gim, '<br />')
-  }, [])
+  // 使用 marked 渲染 Markdown
+  const markdownToHtml = (md: string): string => {
+    if (!md) return ''
+    return marked.parse(md, { async: false }) as string
+  }
 
   const previewHtml = markdownToHtml(markdown)
 

@@ -1,6 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { ArrowLeft, Heart, Eye, Calendar } from 'lucide-react'
 import { useParams, Navigate, useNavigate, Link } from 'react-router-dom'
+import hljs from 'highlight.js'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import python from 'highlight.js/lib/languages/python'
+import java from 'highlight.js/lib/languages/java'
+import cpp from 'highlight.js/lib/languages/cpp'
+import c from 'highlight.js/lib/languages/c'
+import go from 'highlight.js/lib/languages/go'
+import rust from 'highlight.js/lib/languages/rust'
+import sql from 'highlight.js/lib/languages/sql'
+import bash from 'highlight.js/lib/languages/bash'
+import json from 'highlight.js/lib/languages/json'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import markdown from 'highlight.js/lib/languages/markdown'
+import 'highlight.js/styles/github-dark.css'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -15,9 +31,24 @@ import { api } from '@/api/client'
 import { formatDate, formatRelativeTime } from '@/lib/utils'
 import type { PostDetail } from '@/types'
 
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('python', python)
+hljs.registerLanguage('java', java)
+hljs.registerLanguage('cpp', cpp)
+hljs.registerLanguage('c', c)
+hljs.registerLanguage('go', go)
+hljs.registerLanguage('rust', rust)
+hljs.registerLanguage('sql', sql)
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('json', json)
+hljs.registerLanguage('xml', xml)
+hljs.registerLanguage('css', css)
+hljs.registerLanguage('markdown', markdown)
+
 /**
  * 文章内容渲染组件
- * 处理HTML内容，添加图片点击事件和代码块复制功能
+ * 处理HTML内容，添加图片点击事件、代码高亮和代码块复制功能
  */
 function PostContent({
   html,
@@ -30,60 +61,85 @@ function PostContent({
 }) {
   useEffect(() => {
     const content = contentRef.current
-    if (!content) return
+    if (!content || !html) return
 
-    // 为所有图片添加点击事件
-    const images = content.querySelectorAll('img')
-    images.forEach((img) => {
-      img.style.cursor = 'zoom-in'
-      img.addEventListener('click', () => onImageClick(img.src))
-    })
-
-    // 为所有代码块添加复制按钮
-    const preElements = content.querySelectorAll('pre')
-    preElements.forEach((pre) => {
-      const codeElement = pre.querySelector('code')
-      if (codeElement && !pre.querySelector('.copy-code-btn')) {
-        const code = codeElement.textContent || ''
-        pre.style.position = 'relative'
-
-        const button = document.createElement('button')
-        button.className = 'copy-code-btn'
-        button.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          <span style="margin-left: 4px">复制</span>
-        `
-
-        button.addEventListener('click', async () => {
-          await navigator.clipboard.writeText(code)
-          button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="margin-left: 4px">已复制</span>
-          `
-          button.style.background = 'hsl(var(--primary))'
-          button.style.color = 'hsl(var(--primary-foreground))'
-          button.style.borderColor = 'hsl(var(--primary))'
-
-          setTimeout(() => {
-            button.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-              <span style="margin-left: 4px">复制</span>
-            `
-            button.style.background = ''
-            button.style.color = ''
-            button.style.borderColor = ''
-          }, 2000)
-        })
-
-        pre.appendChild(button)
-      }
-    })
-
-    return () => {
+    const applyHighlighting = () => {
+      const images = content.querySelectorAll('img')
       images.forEach((img) => {
-        img.removeEventListener('click', () => onImageClick(img.src))
+        img.style.cursor = 'zoom-in'
+        img.onclick = () => onImageClick(img.src)
+      })
+
+      const preElements = content.querySelectorAll('pre')
+      preElements.forEach((pre) => {
+        const codeElement = pre.querySelector('code')
+        if (!codeElement) return
+
+        const code = codeElement.textContent || ''
+        const className = codeElement.className || ''
+        const langMatch = className.match(/language-(\w+)/)
+        const language = langMatch ? langMatch[1] : 'plaintext'
+
+        try {
+          const result = hljs.highlight(code, { language, ignoreIllegals: true })
+          codeElement.innerHTML = result.value
+          codeElement.className = `hljs language-${language}`
+        } catch {
+          codeElement.className = `hljs language-plaintext`
+        }
+
+        if (!pre.querySelector('.copy-code-btn')) {
+          pre.style.position = 'relative'
+          const button = document.createElement('button')
+          button.className = 'copy-code-btn'
+          button.setAttribute('type', 'button')
+          button.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            background: rgba(255,255,255,0.1);
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+          `
+          button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span>复制</span>
+          `
+          button.onclick = async () => {
+            await navigator.clipboard.writeText(code)
+            button.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>已复制</span>
+            `
+            button.style.background = '#238636'
+            button.style.color = '#fff'
+            button.style.borderColor = '#238636'
+            setTimeout(() => {
+              button.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>复制</span>
+              `
+              button.style.background = 'rgba(255,255,255,0.1)'
+              button.style.color = '#c9d1d9'
+              button.style.borderColor = '#30363d'
+            }, 2000)
+          }
+          pre.appendChild(button)
+        }
       })
     }
+
+    const timer = setTimeout(applyHighlighting, 0)
+    return () => clearTimeout(timer)
   }, [html, contentRef, onImageClick])
 
   return (
@@ -195,7 +251,7 @@ export default function Post() {
         rightSidebar={
           isArticle ? (
             <div className="hidden xl:block">
-              <Toc contentRef={contentRef} />
+              <Toc contentRef={contentRef} html={post.contentHTML} />
             </div>
           ) : (
             <RightSidebar />
