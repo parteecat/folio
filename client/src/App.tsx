@@ -9,6 +9,7 @@ import AdminLogin from '@/pages/AdminLogin'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminEditor from '@/pages/AdminEditor'
 import AdminPostList from '@/pages/AdminPostList'
+import AdminShuoList from '@/pages/AdminShuoList'
 import AdminTagList from '@/pages/AdminTagList'
 
 /**
@@ -61,6 +62,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminPostList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/shuos"
+          element={
+            <ProtectedRoute>
+              <AdminShuoList />
             </ProtectedRoute>
           }
         />
