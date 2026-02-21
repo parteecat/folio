@@ -64,6 +64,7 @@ export interface PostListItem {
   images: string[]
   publishedAt: string | null
   likeCount: number
+  hidden: boolean
   tags: Tag[]
   author: Author
 }
@@ -94,6 +95,7 @@ export interface CreatePostRequest {
   images?: string[]
   tagIds?: string[]
   published?: boolean
+  hidden?: boolean
 }
 
 /**

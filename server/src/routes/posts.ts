@@ -28,6 +28,7 @@ posts.get('/', zValidator('query', listQuerySchema), async (c) => {
   const posts = await prisma.post.findMany({
     where: {
       published: true,
+      hidden: false,
       ...(type && { type }),
       ...(tag && {
         tags: {

@@ -122,9 +122,15 @@ admin.use('*', jwtAuth)
 /**
  * GET /api/admin/posts
  * 获取所有帖子（包括未发布的）
+ * 支持按类型筛选：?type=SHORT|ARTICLE
  */
 admin.get('/posts', async (c) => {
+  const type = c.req.query('type') as 'SHORT' | 'ARTICLE' | undefined
+  
   const posts = await prisma.post.findMany({
+    where: {
+      ...(type && { type }),
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       tags: {
@@ -137,6 +143,38 @@ admin.get('/posts', async (c) => {
   })
 
   return c.json(posts)
+})
+
+/**
+ * POST /api/admin/posts/:id/hide
+ * 隐藏/显示帖子
+ */
+admin.post('/posts/:id/hide', async (c) => {
+  const id = c.req.param('id')
+  const { hidden } = await c.req.json<{ hidden: boolean }>()
+
+  const existing = await prisma.post.findUnique({
+    where: { id },
+  })
+
+  if (!existing) {
+    return c.json({ error: 'Post not found' }, 404)
+  }
+
+  const post = await prisma.post.update({
+    where: { id },
+    data: { hidden },
+    include: {
+      tags: {
+        select: { id: true, name: true, slug: true },
+      },
+      author: {
+        select: { id: true, name: true },
+      },
+    },
+  })
+
+  return c.json(post)
 })
 
 /**
@@ -154,6 +192,7 @@ const createPostSchema = z.object({
   images: z.array(z.string()).default([]),
   tagIds: z.array(z.string()).default([]),
   published: z.boolean().default(false),
+  hidden: z.boolean().default(false),
   shuoAttachments: z.array(z.object({
     type: z.enum(['IMAGE', 'VIDEO', 'GIF']),
     url: z.string(),
