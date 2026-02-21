@@ -5,9 +5,11 @@ import {
   Plus,
   Search,
   Eye,
+  EyeOff,
   Edit,
   Trash2,
   MoreVertical,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +31,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ShuoPostModal } from '@/components/feed/ShuoPostModal'
 import { api } from '@/api/client'
 import { formatRelativeTime } from '@/lib/utils'
 import type { PostListItem } from '@/types'
@@ -39,12 +40,10 @@ interface PostListProps {
   onEdit: (post: PostListItem) => void
   onDelete: (post: PostListItem) => void
   onPreview: (post: PostListItem) => void
+  onToggleHide: (post: PostListItem) => void
 }
 
-/**
- * 文章列表组件
- */
-function PostList({ posts, onEdit, onDelete, onPreview }: PostListProps) {
+function PostList({ posts, onEdit, onDelete, onPreview, onToggleHide }: PostListProps) {
   if (posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -58,15 +57,15 @@ function PostList({ posts, onEdit, onDelete, onPreview }: PostListProps) {
   return (
     <div className="space-y-3">
       {posts.map((post) => (
-        <Card key={post.id} className="group">
+        <Card key={post.id} className={post.hidden ? 'opacity-60' : ''}>
           <CardContent className="flex items-center gap-4 p-4">
-            {/* 类型标识 */}
-            <Badge
-              variant={post.type === 'ARTICLE' ? 'default' : 'secondary'}
-              className="shrink-0"
-            >
-              {post.type === 'ARTICLE' ? '长文' : '说说'}
-            </Badge>
+            {/* 隐藏状态标识 */}
+            {post.hidden && (
+              <Badge variant="secondary" className="shrink-0">
+                <EyeOff className="mr-1 h-3 w-3" />
+                隐藏
+              </Badge>
+            )}
 
             {/* 封面缩略图 */}
             {post.coverImage && (
@@ -138,6 +137,19 @@ function PostList({ posts, onEdit, onDelete, onPreview }: PostListProps) {
                   <Edit className="mr-2 h-4 w-4" />
                   编辑
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onToggleHide(post)}>
+                  {post.hidden ? (
+                    <>
+                      <Eye className="mr-2 h-4 w-4" />
+                      显示
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="mr-2 h-4 w-4" />
+                      隐藏
+                    </>
+                  )}
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onDelete(post)}
                   className="text-destructive"
@@ -154,9 +166,6 @@ function PostList({ posts, onEdit, onDelete, onPreview }: PostListProps) {
   )
 }
 
-/**
- * 文章列表管理页面
- */
 export default function AdminPostList() {
   const navigate = useNavigate()
   const [posts, setPosts] = useState<PostListItem[]>([])
@@ -165,13 +174,12 @@ export default function AdminPostList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
   const [postToDelete, setPostToDelete] = useState<PostListItem | null>(null)
-  const [editingShuo, setEditingShuo] = useState<PostListItem | null>(null)
 
-  // 加载文章列表
+  // 加载文章列表（只加载文章类型）
   const loadPosts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await api.admin.getPosts()
+      const data = await api.admin.getPosts('ARTICLE')
       setPosts(data)
       setFilteredPosts(data)
     } catch (error) {
@@ -210,20 +218,28 @@ export default function AdminPostList() {
     setFilteredPosts(result)
   }, [posts, searchQuery, filter])
 
-  // 编辑文章 - 说说使用弹窗编辑，文章使用页面编辑
+  // 编辑文章
   const handleEdit = (post: PostListItem) => {
-    if (post.type === 'SHORT') {
-      // 说说使用弹窗编辑
-      setEditingShuo(post)
-    } else {
-      // 文章使用页面编辑
-      navigate(`/admin/editor/${post.id}`)
-    }
+    navigate(`/admin/editor/${post.id}`)
   }
 
   // 预览文章
   const handlePreview = (post: PostListItem) => {
     window.open(`/post/${post.slug}`, '_blank')
+  }
+
+  // 切换隐藏状态
+  const handleToggleHide = async (post: PostListItem) => {
+    try {
+      await api.admin.hidePost(post.id, !post.hidden)
+      // 更新本地状态
+      setPosts(posts.map(p => 
+        p.id === post.id ? { ...p, hidden: !post.hidden } : p
+      ))
+    } catch (error) {
+      console.error('Failed to toggle hide:', error)
+      alert('操作失败，请重试')
+    }
   }
 
   // 删除文章
@@ -251,14 +267,14 @@ export default function AdminPostList() {
               size="sm"
               onClick={() => navigate('/admin/dashboard')}
             >
+              <ArrowLeft className="mr-2 h-4 w-4" />
               返回仪表盘
             </Button>
-            <h1 className="text-xl font-bold">内容管理</h1>
+            <h1 className="text-xl font-bold">文章管理</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setEditingShuo({} as PostListItem)}>
-              <Plus className="mr-2 h-4 w-4" />
-              发说说
+            <Button variant="outline" onClick={() => navigate('/admin/shuos')}>
+              管理说说
             </Button>
             <Button onClick={() => navigate('/admin/editor')}>
               <Plus className="mr-2 h-4 w-4" />
@@ -314,6 +330,8 @@ export default function AdminPostList() {
           <span>{posts.filter((p) => p.publishedAt).length} 已发布</span>
           <span>·</span>
           <span>{posts.filter((p) => !p.publishedAt).length} 草稿</span>
+          <span>·</span>
+          <span>{posts.filter((p) => p.hidden).length} 隐藏</span>
         </div>
 
         {/* 文章列表 */}
@@ -327,6 +345,7 @@ export default function AdminPostList() {
             onEdit={handleEdit}
             onDelete={setPostToDelete}
             onPreview={handlePreview}
+            onToggleHide={handleToggleHide}
           />
         )}
       </main>
@@ -354,16 +373,6 @@ export default function AdminPostList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* 说说编辑弹窗 */}
-      <ShuoPostModal
-        open={Boolean(editingShuo)}
-        editingPost={editingShuo}
-        onClose={() => setEditingShuo(null)}
-        onSuccess={() => {
-          loadPosts()
-        }}
-      />
     </div>
   )
 }
