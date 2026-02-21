@@ -18,9 +18,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || ''
  */
 class ApiClient {
   private baseURL: string
+  private pendingGetRequests = new Map<string, Promise<unknown>>()
 
   constructor(baseURL: string = '') {
     this.baseURL = baseURL
+  }
+
+  private createGetRequestKey(url: string, queryString: string): string {
+    const token = useAuthStore.getState().accessToken || ''
+    return `GET:${url}${queryString}::${token}`
   }
 
   /**
@@ -100,12 +106,29 @@ class ApiClient {
       ? '?' + new URLSearchParams(params).toString()
       : ''
 
-    const response = await fetch(`${this.baseURL}${url}${queryString}`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    })
+    // 去重同一时刻的重复GET（例如React StrictMode在开发环境下触发effect双执行）
+    const requestKey = this.createGetRequestKey(url, queryString)
+    const existingRequest = this.pendingGetRequests.get(requestKey)
+    if (existingRequest) {
+      return existingRequest as Promise<T>
+    }
 
-    return this.handleResponse<T>(response)
+    const requestPromise = (async () => {
+      const response = await fetch(`${this.baseURL}${url}${queryString}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      })
+
+      return this.handleResponse<T>(response)
+    })()
+
+    this.pendingGetRequests.set(requestKey, requestPromise as Promise<unknown>)
+
+    try {
+      return await requestPromise
+    } finally {
+      this.pendingGetRequests.delete(requestKey)
+    }
   }
 
   /**
