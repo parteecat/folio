@@ -12,8 +12,13 @@ const upload = new Hono()
  * 上传配置
  */
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '5242880') // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const MAX_IMAGE_SIZE = parseInt(process.env.MAX_IMAGE_SIZE || '10485760') // 10MB
+const MAX_VIDEO_SIZE = parseInt(process.env.MAX_VIDEO_SIZE || '104857600') // 100MB
+
+// 允许的文件类型
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
 
 /**
  * 确保上传目录存在
@@ -40,17 +45,23 @@ const generateFilename = (originalName: string): string => {
  * 验证文件类型
  */
 const validateFile = (file: File): { valid: boolean; error?: string } => {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { 
-      valid: false, 
-      error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(', ')}` 
+  const isImage = ALLOWED_IMAGE_TYPES.includes(file.type)
+  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type)
+
+  if (!isImage && !isVideo) {
+    return {
+      valid: false,
+      error: `Invalid file type. Allowed images: ${ALLOWED_IMAGE_TYPES.join(', ')}, videos: ${ALLOWED_VIDEO_TYPES.join(', ')}`
     }
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return { 
-      valid: false, 
-      error: `File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB` 
+  // 根据文件类型使用不同的大小限制
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: `File too large. Max size for ${isVideo ? 'videos' : 'images'}: ${maxSize / 1024 / 1024}MB`
     }
   }
 

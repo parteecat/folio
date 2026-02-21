@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { ShuoPostModal } from '@/components/feed/ShuoPostModal'
 import { api } from '@/api/client'
 import { formatRelativeTime } from '@/lib/utils'
 import type { PostListItem } from '@/types'
@@ -64,7 +65,7 @@ function PostList({ posts, onEdit, onDelete, onPreview }: PostListProps) {
               variant={post.type === 'ARTICLE' ? 'default' : 'secondary'}
               className="shrink-0"
             >
-              {post.type === 'ARTICLE' ? '长文' : '短内容'}
+              {post.type === 'ARTICLE' ? '长文' : '说说'}
             </Badge>
 
             {/* 封面缩略图 */}
@@ -164,6 +165,7 @@ export default function AdminPostList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
   const [postToDelete, setPostToDelete] = useState<PostListItem | null>(null)
+  const [editingShuo, setEditingShuo] = useState<PostListItem | null>(null)
 
   // 加载文章列表
   const loadPosts = useCallback(async () => {
@@ -208,9 +210,15 @@ export default function AdminPostList() {
     setFilteredPosts(result)
   }, [posts, searchQuery, filter])
 
-  // 编辑文章
+  // 编辑文章 - 说说使用弹窗编辑，文章使用页面编辑
   const handleEdit = (post: PostListItem) => {
-    navigate(`/admin/editor/${post.id}`)
+    if (post.type === 'SHORT') {
+      // 说说使用弹窗编辑
+      setEditingShuo(post)
+    } else {
+      // 文章使用页面编辑
+      navigate(`/admin/editor/${post.id}`)
+    }
   }
 
   // 预览文章
@@ -245,12 +253,18 @@ export default function AdminPostList() {
             >
               返回仪表盘
             </Button>
-            <h1 className="text-xl font-bold">文章管理</h1>
+            <h1 className="text-xl font-bold">内容管理</h1>
           </div>
-          <Button onClick={() => navigate('/admin/editor')}>
-            <Plus className="mr-2 h-4 w-4" />
-            新建文章
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setEditingShuo({} as PostListItem)}>
+              <Plus className="mr-2 h-4 w-4" />
+              发说说
+            </Button>
+            <Button onClick={() => navigate('/admin/editor')}>
+              <Plus className="mr-2 h-4 w-4" />
+              新建文章
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -340,6 +354,16 @@ export default function AdminPostList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 说说编辑弹窗 */}
+      <ShuoPostModal
+        open={Boolean(editingShuo)}
+        editingPost={editingShuo}
+        onClose={() => setEditingShuo(null)}
+        onSuccess={() => {
+          loadPosts()
+        }}
+      />
     </div>
   )
 }

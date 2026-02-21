@@ -33,6 +33,20 @@ export interface Author {
 }
 
 /**
+ * 说说附件类型
+ */
+export interface ShuoAttachment {
+  id: string
+  type: 'IMAGE' | 'VIDEO' | 'GIF'
+  url: string
+  width?: number
+  height?: number
+  duration?: number
+  size?: number
+  mimeType?: string
+}
+
+/**
  * 帖子列表项
  */
 export interface PostListItem {
@@ -43,6 +57,7 @@ export interface PostListItem {
   excerpt: string | null
   coverImage: string | null
   images: string[]
+  shuoAttachments?: ShuoAttachment[]
   publishedAt: string | null
   createdAt: string
   likeCount: number
@@ -82,6 +97,7 @@ export interface CreatePostRequest {
   excerpt?: string
   coverImage?: string
   images?: string[]
+  shuoAttachments?: ShuoAttachment[]
   tagIds?: string[]
   published?: boolean
 }

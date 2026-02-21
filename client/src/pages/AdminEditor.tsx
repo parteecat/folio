@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, Type } from 'lucide-react'
+import { ArrowLeft, Eye, Type, X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,7 +11,7 @@ import { TipTapEditor } from '@/components/editor/TipTapEditor'
 import { ImageUpload } from '@/components/editor/ImageUpload'
 import { api } from '@/api/client'
 import { generateSlug } from '@/lib/utils'
-import { PostType } from '@/types'
+import { PostType, type Tag } from '@/types'
 import TurndownService from 'turndown'
 
 // 配置 turndown - HTML 转 Markdown
@@ -51,6 +51,23 @@ export default function AdminEditor() {
   const [isPublished, setIsPublished] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  // 标签相关状态
+  const [allTags, setAllTags] = useState<Tag[]>([])
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+  const [filteredTags, setFilteredTags] = useState<Tag[]>([])
+
+  // 加载所有标签
+  useEffect(() => {
+    api.tags
+      .list()
+      .then((tags) => {
+        setAllTags(tags)
+      })
+      .catch((error) => {
+        console.error('Failed to load tags:', error)
+      })
+  }, [])
+
   // 加载已有文章
   useEffect(() => {
     if (!id) return
@@ -71,6 +88,22 @@ export default function AdminEditor() {
         console.error('Failed to load post:', error)
       })
   }, [id])
+
+  // 根据输入过滤标签
+  useEffect(() => {
+    if (tagInput.trim()) {
+      const filtered = allTags.filter(
+        (tag) =>
+          tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+          !tags.includes(tag.name)
+      )
+      setFilteredTags(filtered)
+      setShowTagDropdown(filtered.length > 0 || tagInput.trim().length > 0)
+    } else {
+      setShowTagDropdown(false)
+      setFilteredTags([])
+    }
+  }, [tagInput, allTags, tags])
 
   // 自动生成slug
   useEffect(() => {
@@ -93,12 +126,41 @@ export default function AdminEditor() {
     []
   )
 
-  // 添加标签
+  // 添加标签（支持选择现有标签或创建新标签）
   const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()])
+    const trimmedTag = tagInput.trim()
+    if (!trimmedTag) return
+
+    // 检查是否已存在该标签
+    if (tags.includes(trimmedTag)) {
       setTagInput('')
+      setShowTagDropdown(false)
+      return
     }
+
+    // 检查是否匹配现有标签（不区分大小写）
+    const existingTag = allTags.find(
+      (t) => t.name.toLowerCase() === trimmedTag.toLowerCase()
+    )
+
+    if (existingTag) {
+      setTags([...tags, existingTag.name])
+    } else {
+      // 创建新标签
+      setTags([...tags, trimmedTag])
+    }
+
+    setTagInput('')
+    setShowTagDropdown(false)
+  }
+
+  // 选择现有标签
+  const handleSelectTag = (tagName: string) => {
+    if (!tags.includes(tagName)) {
+      setTags([...tags, tagName])
+    }
+    setTagInput('')
+    setShowTagDropdown(false)
   }
 
   // 删除标签
@@ -119,6 +181,35 @@ export default function AdminEditor() {
     setIsSaving(true)
 
     try {
+      // 处理标签：将标签名称转换为 tagIds
+      // 对于已存在的标签，使用其 ID；对于新标签，先创建再获取 ID
+      const tagIds: string[] = []
+      const newTags: string[] = []
+
+      for (const tagName of tags) {
+        const existingTag = allTags.find(
+          (t) => t.name.toLowerCase() === tagName.toLowerCase()
+        )
+        if (existingTag) {
+          tagIds.push(existingTag.id)
+        } else {
+          newTags.push(tagName)
+        }
+      }
+
+      // 创建新标签
+      for (const newTagName of newTags) {
+        try {
+          const newTag = await api.tags.create({
+            name: newTagName,
+            slug: generateSlug(newTagName),
+          })
+          tagIds.push(newTag.id)
+        } catch (error) {
+          console.error(`Failed to create tag ${newTagName}:`, error)
+        }
+      }
+
       const postData = {
         type,
         title,
@@ -127,6 +218,7 @@ export default function AdminEditor() {
         coverImage,
         contentMD,
         contentHTML,
+        tagIds,
         published: publish || isPublished,
       }
 
@@ -236,7 +328,7 @@ export default function AdminEditor() {
                       onClick={() => setType(PostType.SHORT)}
                       className="flex-1"
                     >
-                      短内容
+                      说说
                     </Button>
                   </div>
                 </div>
@@ -285,37 +377,111 @@ export default function AdminEditor() {
                 {/* 标签 */}
                 <div>
                   <label className="mb-2 block text-xs text-muted-foreground">标签</label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="添加标签"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleAddTag()
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
-                    <Button size="sm" className="h-8 px-3" onClick={handleAddTag}>
-                      添加
-                    </Button>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="搜索或添加标签"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddTag()
+                          }
+                        }}
+                        className="h-8 text-sm"
+                      />
+                      <Button size="sm" className="h-8 px-3" onClick={handleAddTag}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* 标签下拉列表 */}
+                    {showTagDropdown && (
+                      <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md">
+                        <div className="max-h-32 overflow-y-auto py-1">
+                          {filteredTags.length > 0 ? (
+                            filteredTags.map((tag) => (
+                              <button
+                                key={tag.id}
+                                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-accent"
+                                onClick={() => handleSelectTag(tag.name)}
+                              >
+                                <span>{tag.name}</span>
+                                {tag._count?.posts && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {tag._count.posts} 篇
+                                  </span>
+                                )}
+                              </button>
+                            ))
+                          ) : tagInput.trim() ? (
+                            <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                              按 Enter 创建新标签 "{tagInput.trim()}"
+                            </div>
+                          ) : (
+                            allTags
+                              .filter((t) => !tags.includes(t.name))
+                              .slice(0, 5)
+                              .map((tag) => (
+                                <button
+                                  key={tag.id}
+                                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-accent"
+                                  onClick={() => handleSelectTag(tag.name)}
+                                >
+                                  <span>{tag.name}</span>
+                                  {tag._count?.posts && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {tag._count.posts} 篇
+                                    </span>
+                                  )}
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
+                  {/* 已选标签 */}
                   {tags.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {tags.map((tag) => (
                         <Badge
                           key={tag}
                           variant="secondary"
-                          className="cursor-pointer text-xs"
-                          onClick={() => handleRemoveTag(tag)}
+                          className="flex items-center gap-1 text-xs"
                         >
                           {tag}
-                          <span className="ml-1">×</span>
+                          <button
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-1 rounded-full hover:bg-accent"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </Badge>
                       ))}
+                    </div>
+                  )}
+
+                  {/* 已有标签快捷选择 */}
+                  {allTags.length > 0 && tags.length < allTags.length && (
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs text-muted-foreground">快速选择：</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {allTags
+                          .filter((t) => !tags.includes(t.name))
+                          .slice(0, 8)
+                          .map((tag) => (
+                            <button
+                              key={tag.id}
+                              onClick={() => handleSelectTag(tag.name)}
+                              className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                            >
+                              + {tag.name}
+                            </button>
+                          ))}
+                      </div>
                     </div>
                   )}
                 </div>

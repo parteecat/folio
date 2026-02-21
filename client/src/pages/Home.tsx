@@ -1,13 +1,15 @@
-import { useEffect, useCallback, useRef } from 'react'
-import { Menu } from 'lucide-react'
+import { useEffect, useCallback, useRef, useState } from 'react'
+import { Menu, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThreeColumnLayout } from '@/components/layout/ThreeColumnLayout'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
 import { TypeFilter } from '@/components/feed/TypeFilter'
 import { FeedList } from '@/components/feed/FeedList'
-import { useUIStore, useFeedStore } from '@/store/useStore'
+import { ShuoPostModal } from '@/components/feed/ShuoPostModal'
+import { useUIStore, useFeedStore, useAuthStore } from '@/store/useStore'
 import { api } from '@/api/client'
+import type { PostListItem } from '@/types'
 
 /**
  * 首页（Feed流）
@@ -16,9 +18,13 @@ import { api } from '@/api/client'
  * - 三栏布局展示
  * - 帖子列表（无限滚动）
  * - 类型筛选（全部/短文/文章）
+ * - 发说说功能
  */
 export default function Home() {
   const { toggleLeftSidebar } = useUIStore()
+  const { isAuthenticated } = useAuthStore()
+  const [shuoModalOpen, setShuoModalOpen] = useState(false)
+  const [editingPost, setEditingPost] = useState<PostListItem | null>(null)
   const {
     posts,
     cursor,
@@ -136,6 +142,40 @@ export default function Home() {
     console.log('Liked post:', id)
   }, [])
 
+  /**
+   * 刷新列表
+   */
+  const refreshFeed = useCallback(() => {
+    // 重置状态并重新加载
+    initializedRef.current = false
+    setLoading(true)
+
+    const params: { cursor?: string; type?: string; limit: string } = {
+      limit: '10',
+    }
+
+    if (selectedType !== 'ALL') {
+      params.type = selectedType
+    }
+
+    api.posts
+      .list(params)
+      .then((response) => {
+        setPosts(response.data)
+        useFeedStore.setState({
+          cursor: response.nextCursor,
+          hasMore: response.hasMore,
+        })
+        initializedRef.current = true
+      })
+      .catch((error) => {
+        console.error('Failed to refresh feed:', error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [selectedType, setLoading, setPosts])
+
   return (
     <ThreeColumnLayout
       leftSidebar={<LeftSidebar />}
@@ -159,6 +199,20 @@ export default function Home() {
         <h1 className="text-xl font-bold">首页</h1>
       </header>
 
+      {/* 发说说按钮（登录后显示） */}
+      {isAuthenticated && (
+        <div className="border-b p-4">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => setShuoModalOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            分享新鲜事...
+          </Button>
+        </div>
+      )}
+
       {/* 类型筛选器 */}
       <TypeFilter value={selectedType} onChange={handleTypeChange} />
 
@@ -170,8 +224,24 @@ export default function Home() {
           hasMore={hasMore}
           onLoadMore={handleLoadMore}
           onLike={handleLike}
+          onEdit={setEditingPost}
         />
       </div>
+
+      {/* 发说说弹窗 */}
+      <ShuoPostModal
+        open={shuoModalOpen}
+        onClose={() => setShuoModalOpen(false)}
+        onSuccess={refreshFeed}
+      />
+
+      {/* 编辑说说弹窗 */}
+      <ShuoPostModal
+        open={Boolean(editingPost)}
+        editingPost={editingPost}
+        onClose={() => setEditingPost(null)}
+        onSuccess={refreshFeed}
+      />
     </ThreeColumnLayout>
   )
 }

@@ -7,7 +7,7 @@ interface TypeFilterProps {
 
 const filters = [
   { value: 'ALL', label: '全部' },
-  { value: 'SHORT', label: '短内容' },
+  { value: 'SHORT', label: '说说' },
   { value: 'ARTICLE', label: '长文章' },
 ] as const
 

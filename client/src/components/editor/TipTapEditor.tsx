@@ -35,6 +35,8 @@ interface TipTapEditorProps {
   onChange: (html: string) => void
   placeholder?: string
   onImageUpload?: (file: File) => Promise<string>
+  minimal?: boolean
+  className?: string
 }
 
 function EditorToolbar({ editor }: { editor: Editor | null }) {
@@ -108,6 +110,8 @@ export function TipTapEditor({
   onChange,
   placeholder = '开始写作...支持从 Obsidian/Typora 粘贴 Markdown',
   onImageUpload,
+  minimal = false,
+  className,
 }: TipTapEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -149,7 +153,12 @@ export function TipTapEditor({
     content,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[350px] px-4 py-3',
+        class: cn(
+          'prose prose-sm max-w-none focus:outline-none',
+          minimal 
+            ? 'min-h-[80px]' 
+            : 'min-h-[350px] px-4 py-3'
+        ),
       },
       handleDrop: (view, event, _slice, moved) => {
         if (!moved && event.dataTransfer && onImageUpload) {
@@ -223,8 +232,11 @@ export function TipTapEditor({
   }, [content, editor])
 
   return (
-    <div className="rounded-lg border bg-card">
-      <EditorToolbar editor={editor} />
+    <div className={cn(
+      minimal ? '' : 'rounded-lg border bg-card',
+      className
+    )}>
+      {!minimal && <EditorToolbar editor={editor} />}
       <EditorContent editor={editor} />
     </div>
   )

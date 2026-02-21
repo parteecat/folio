@@ -1,22 +1,37 @@
 import { NavLink } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Pencil } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { formatRelativeTime } from '@/lib/utils'
-import { ImageGrid } from './ImageGrid'
+import { ShuoAttachmentGrid } from './ShuoPostModal'
 import { LikeButton } from './LikeButton'
-import type { PostListItem } from '@/types'
+import { useAuthStore } from '@/store/useStore'
+import type { PostListItem, ShuoAttachment } from '@/types'
 
 interface FeedCardProps {
   post: PostListItem
   onLike?: (id: string) => void
+  onEdit?: (post: PostListItem) => void
 }
 
 /**
- * 短内容卡片（SHORT类型）
- * 直接展示全文+图片网格
+ * 说说卡片（SHORT类型）
+ * 类似朋友圈/QQ空间说说样式
+ * 支持九宫格图片、视频、GIF
  */
-function ShortCard({ post, onLike }: FeedCardProps) {
+function ShortCard({ post, onLike, onEdit }: FeedCardProps) {
+  const { isAuthenticated } = useAuthStore()
+
+  // 转换attachments格式
+  const attachments: ShuoAttachment[] = post.shuoAttachments?.length
+    ? post.shuoAttachments
+    : post.images.map((url, index) => ({
+        id: `legacy-${index}`,
+        type: 'IMAGE',
+        url,
+      }))
+
   return (
     <article className="border-b p-4 transition-colors hover:bg-muted/50">
       {/* 作者信息 */}
@@ -33,15 +48,33 @@ function ShortCard({ post, onLike }: FeedCardProps) {
         </div>
       </div>
 
-      {/* 内容 */}
-      <div className="prose prose-sm max-w-none dark:prose-invert">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">
-          {post.excerpt || '暂无内容'}
-        </p>
-      </div>
+      {/* 内容 - 渲染HTML */}
+      {post.excerpt && (
+        <div
+          className="prose prose-sm max-w-none text-sm leading-relaxed dark:prose-invert [&>p]:m-0 [&>p+p]:mt-2 [&>ul]:mt-2 [&>ol]:mt-2 [&>h1]:mt-3 [&>h1]:mb-2 [&>h2]:mt-3 [&>h2]:mb-2 [&>h3]:mt-3 [&>h3]:mb-2"
+          dangerouslySetInnerHTML={{ __html: post.excerpt }}
+        />
+      )}
 
-      {/* 图片网格 */}
-      <ImageGrid images={post.images} />
+      {/* 媒体附件 - 九宫格布局 */}
+      {attachments.length > 0 && (
+        <div className="mt-3">
+          <ShuoAttachmentGrid attachments={attachments} />
+        </div>
+      )}
+
+      {/* 标签 */}
+      {post.tags && post.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {post.tags.map((tag) => (
+            <NavLink key={tag.id} to={`/tag/${tag.slug}`}>
+              <Badge variant="secondary" className="text-xs hover:bg-primary/10">
+                #{tag.name}
+              </Badge>
+            </NavLink>
+          ))}
+        </div>
+      )}
 
       {/* 底部操作栏 */}
       <div className="mt-4 flex items-center justify-between">
@@ -50,9 +83,22 @@ function ShortCard({ post, onLike }: FeedCardProps) {
           initialCount={post.likeCount} 
           onLike={onLike}
         />
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-          短内容
-        </span>
+        <div className="flex items-center gap-2">
+          {isAuthenticated && onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"
+              onClick={() => onEdit(post)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              编辑
+            </Button>
+          )}
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            说说
+          </span>
+        </div>
       </div>
     </article>
   )
@@ -103,6 +149,19 @@ function ArticleCard({ post }: { post: PostListItem }) {
           {post.excerpt || '暂无摘要'}
         </p>
 
+        {/* 标签 */}
+        {post.tags && post.tags.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            {post.tags.map((tag) => (
+              <NavLink key={tag.id} to={`/tag/${tag.slug}`}>
+                <Badge variant="secondary" className="text-xs hover:bg-primary/10">
+                  #{tag.name}
+                </Badge>
+              </NavLink>
+            ))}
+          </div>
+        )}
+
         {/* 底部信息栏 */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" className="group/btn gap-1 px-0 hover:bg-transparent">
@@ -122,9 +181,9 @@ function ArticleCard({ post }: { post: PostListItem }) {
  * Feed卡片组件
  * 根据帖子类型渲染不同的卡片样式
  */
-export function FeedCard({ post, onLike }: FeedCardProps) {
+export function FeedCard({ post, onLike, onEdit }: FeedCardProps) {
   return post.type === 'SHORT' ? (
-    <ShortCard post={post} onLike={onLike} />
+    <ShortCard post={post} onLike={onLike} onEdit={onEdit} />
   ) : (
     <ArticleCard post={post} />
   )

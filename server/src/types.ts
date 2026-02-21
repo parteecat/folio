@@ -47,6 +47,20 @@ export interface PaginatedResponse<T> {
 }
 
 /**
+ * 说说附件输出类型
+ */
+export interface ShuoAttachmentOutput {
+  id: string
+  type: 'IMAGE' | 'VIDEO' | 'GIF'
+  url: string
+  width?: number
+  height?: number
+  duration?: number
+  size?: number
+  mimeType?: string
+}
+
+/**
  * 帖子列表项（公开接口返回）
  */
 export interface PostListItem {
@@ -64,6 +78,7 @@ export interface PostListItem {
     name: string
     slug: string
   }[]
+  shuoAttachments?: ShuoAttachmentOutput[]
   author: {
     id: string
     name: string | null
@@ -83,6 +98,19 @@ export interface PostDetail extends PostListItem {
 }
 
 /**
+ * 说说附件类型
+ */
+export interface ShuoAttachmentInput {
+  type: 'IMAGE' | 'VIDEO' | 'GIF'
+  url: string
+  width?: number
+  height?: number
+  duration?: number
+  size?: number
+  mimeType?: string
+}
+
+/**
  * 创建帖子请求体
  */
 export interface CreatePostBody {
@@ -96,6 +124,7 @@ export interface CreatePostBody {
   images?: string[]
   tagIds?: string[]
   published?: boolean
+  shuoAttachments?: ShuoAttachmentInput[]
 }
 
 /**

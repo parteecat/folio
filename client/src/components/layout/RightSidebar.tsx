@@ -54,6 +54,7 @@ function ProfileCard() {
 
 /**
  * 最近文章列表
+ * 只显示文章类型（ARTICLE），不包括说说
  */
 function RecentPosts() {
   const [recentPosts, setRecentPosts] = useState<PostListItem[]>([])
@@ -64,8 +65,8 @@ function RecentPosts() {
     if (initializedRef.current) return
     initializedRef.current = true
 
-    // 获取最近5篇文章
-    api.posts.list({ limit: '5' }).then((response) => {
+    // 获取最近5篇文章（只获取ARTICLE类型）
+    api.posts.list({ limit: '5', type: 'ARTICLE' }).then((response) => {
       setRecentPosts(response.data)
     }).catch((error) => {
       console.error('Failed to load recent posts:', error)
@@ -96,6 +97,7 @@ function RecentPosts() {
 
 /**
  * 热门文章列表
+ * 只显示文章类型（ARTICLE），不包括说说
  */
 function TrendingPosts() {
   const [trendingPosts, setTrendingPosts] = useState<PostListItem[]>([])
@@ -106,10 +108,13 @@ function TrendingPosts() {
     if (initializedRef.current) return
     initializedRef.current = true
 
-    // 获取点赞最多的文章
-    api.posts.list({ limit: '5' }).then((response) => {
-      // 按点赞数排序
-      const sorted = [...response.data].sort((a, b) => b.likeCount - a.likeCount)
+    // 获取点赞最多的文章（只获取ARTICLE类型）
+    api.posts.list({ limit: '20', type: 'ARTICLE' }).then((response) => {
+      // 按点赞数排序并取前5
+      const sorted = [...response.data]
+        .filter(post => post.type === 'ARTICLE')
+        .sort((a, b) => b.likeCount - a.likeCount)
+        .slice(0, 5)
       setTrendingPosts(sorted)
     }).catch((error) => {
       console.error('Failed to load trending posts:', error)

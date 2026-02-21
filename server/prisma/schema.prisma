@@ -9,8 +9,15 @@ datasource db {
 
 // 帖子类型枚举
 enum PostType {
-  SHORT   // 短内容（推文样式）
+  SHORT   // 说说（朋友圈样式）
   ARTICLE // 长文章
+}
+
+// 说说附件类型枚举
+enum ShuoAttachmentType {
+  IMAGE   // 图片
+  VIDEO   // 视频
+  GIF     // GIF动图
 }
 
 // 用户角色枚举
@@ -50,6 +57,26 @@ model Tag {
   @@map("tags")
 }
 
+// 说说附件表
+model ShuoAttachment {
+  id        String             @id @default(cuid())
+  type      ShuoAttachmentType
+  url       String             // 文件URL
+  width     Int?               // 图片/视频宽度
+  height    Int?               // 图片/视频高度
+  duration  Int?               // 视频时长（秒）
+  size      Int?               // 文件大小（字节）
+  mimeType  String?            // MIME类型
+  createdAt DateTime           @default(now())
+
+  // 关联帖子
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("shuo_attachments")
+}
+
 // 帖子表
 model Post {
   id           String   @id @default(cuid())
@@ -59,8 +86,8 @@ model Post {
   contentMD    String   @db.Text // Markdown原文
   contentHTML  String   @db.Text // 渲染后的HTML
   excerpt      String?  @db.Text // 摘要
-  coverImage   String?  // 封面图
-  images       String[] // 图片列表（用于SHORT类型）
+  coverImage   String?  // 封面图（用于长文章）
+  images       String[] // 图片列表（向后兼容）
   published    Boolean  @default(false)
   publishedAt  DateTime?
   likeCount    Int      @default(0)
@@ -74,6 +101,9 @@ model Post {
 
   // 多对多关联标签
   tags Tag[]
+
+  // 说说附件（新的多媒体支持）
+  shuoAttachments ShuoAttachment[]
 
   @@index([published, publishedAt])
   @@index([type, published])

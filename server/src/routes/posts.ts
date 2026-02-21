@@ -63,6 +63,18 @@ posts.get('/', zValidator('query', listQuerySchema), async (c) => {
           slug: true,
         },
       },
+      shuoAttachments: {
+        select: {
+          id: true,
+          type: true,
+          url: true,
+          width: true,
+          height: true,
+          duration: true,
+          size: true,
+          mimeType: true,
+        },
+      },
       author: {
         select: {
           id: true,
@@ -120,6 +132,18 @@ posts.get('/:slug', async (c) => {
               slug: true,
             },
           },
+          shuoAttachments: {
+            select: {
+              id: true,
+              type: true,
+              url: true,
+              width: true,
+              height: true,
+              duration: true,
+              size: true,
+              mimeType: true,
+            },
+          },
           author: {
             select: {
               id: true,
@@ -151,6 +175,18 @@ posts.get('/:slug', async (c) => {
               id: true,
               name: true,
               slug: true,
+            },
+          },
+          shuoAttachments: {
+            select: {
+              id: true,
+              type: true,
+              url: true,
+              width: true,
+              height: true,
+              duration: true,
+              size: true,
+              mimeType: true,
             },
           },
           author: {

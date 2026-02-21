@@ -154,6 +154,15 @@ const createPostSchema = z.object({
   images: z.array(z.string()).default([]),
   tagIds: z.array(z.string()).default([]),
   published: z.boolean().default(false),
+  shuoAttachments: z.array(z.object({
+    type: z.enum(['IMAGE', 'VIDEO', 'GIF']),
+    url: z.string(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    duration: z.number().optional(),
+    size: z.number().optional(),
+    mimeType: z.string().optional(),
+  })).default([]),
 })
 
 admin.post('/posts', zValidator('json', createPostSchema), async (c) => {
@@ -169,8 +178,8 @@ admin.post('/posts', zValidator('json', createPostSchema), async (c) => {
     return c.json({ error: 'Slug already exists' }, 409)
   }
 
-  // 排除 tagIds，它不是 Prisma 模型字段
-  const { tagIds, ...postData } = data
+  // 排除 tagIds 和 shuoAttachments，它们不是直接的 Prisma 模型字段
+  const { tagIds, shuoAttachments, ...postData } = data
 
   const post = await prisma.post.create({
     data: {
@@ -180,9 +189,21 @@ admin.post('/posts', zValidator('json', createPostSchema), async (c) => {
       tags: {
         connect: tagIds?.map(id => ({ id })) || [],
       },
+      shuoAttachments: shuoAttachments?.length > 0 ? {
+        create: shuoAttachments.map(att => ({
+          type: att.type,
+          url: att.url,
+          width: att.width,
+          height: att.height,
+          duration: att.duration,
+          size: att.size,
+          mimeType: att.mimeType,
+        })),
+      } : undefined,
     },
     include: {
       tags: true,
+      shuoAttachments: true,
       author: {
         select: { id: true, name: true },
       },
@@ -220,6 +241,22 @@ admin.put('/posts/:id', zValidator('json', updatePostSchema), async (c) => {
     }
   }
 
+  // 处理 shuoAttachments 更新
+  const shuoAttachmentsData = data.shuoAttachments
+    ? {
+        deleteMany: {}, // 先删除所有现有附件
+        create: data.shuoAttachments.map((att) => ({
+          type: att.type,
+          url: att.url,
+          width: att.width,
+          height: att.height,
+          duration: att.duration,
+          size: att.size,
+          mimeType: att.mimeType,
+        })),
+      }
+    : undefined
+
   const post = await prisma.post.update({
     where: { id },
     data: {
@@ -228,12 +265,16 @@ admin.put('/posts/:id', zValidator('json', updatePostSchema), async (c) => {
       ...(data.published && !existing.published && { publishedAt: new Date() }),
       // 从已发布变为未发布时，清空发布时间
       ...(data.published === false && existing.published && { publishedAt: null }),
-      tags: data.tagIds ? {
-        set: data.tagIds.map(id => ({ id })),
-      } : undefined,
+      tags: data.tagIds
+        ? {
+            set: data.tagIds.map((id) => ({ id })),
+          }
+        : undefined,
+      shuoAttachments: shuoAttachmentsData,
     },
     include: {
       tags: true,
+      shuoAttachments: true,
       author: {
         select: { id: true, name: true },
       },

@@ -9,6 +9,7 @@ interface FeedListProps {
   hasMore: boolean
   onLoadMore: () => void
   onLike?: (id: string) => void
+  onEdit?: (post: PostListItem) => void
 }
 
 /**
@@ -21,6 +22,7 @@ export function FeedList({
   hasMore,
   onLoadMore,
   onLike,
+  onEdit,
 }: FeedListProps) {
   const { loadMoreRef } = useInfiniteScroll({
     onLoadMore,
@@ -45,7 +47,7 @@ export function FeedList({
   return (
     <div className="divide-y">
       {posts.map((post) => (
-        <FeedCard key={post.id} post={post} onLike={onLike} />
+        <FeedCard key={post.id} post={post} onLike={onLike} onEdit={onEdit} />
       ))}
 
       {/* 加载指示器 */}
