@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, Type, X, Plus } from 'lucide-react'
+import { ArrowLeft, Eye, X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,8 +39,8 @@ export default function AdminEditor() {
   const { id } = useParams()
   const isEditing = Boolean(id)
 
-  // 表单状态
-  const [type, setType] = useState<PostType>(PostType.ARTICLE)
+  // 表单状态 - 文章编辑器只创建/编辑文章，固定为 ARTICLE 类型
+  const type = PostType.ARTICLE
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
   const [excerpt, setExcerpt] = useState('')
@@ -75,7 +75,6 @@ export default function AdminEditor() {
     api.posts
       .get(id)
       .then((post) => {
-        setType(post.type)
         setTitle(post.title || '')
         setSlug(post.slug)
         setExcerpt(post.excerpt || '')
@@ -302,38 +301,13 @@ export default function AdminEditor() {
             </div>
           </div>
 
-          {/* 右侧：设置面板 */}
+            {/* 右侧：设置面板 */}
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">文章设置</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* 文章类型 */}
-                <div>
-                  <label className="mb-2 block text-xs text-muted-foreground">文章类型</label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={type === PostType.ARTICLE ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setType(PostType.ARTICLE)}
-                      className="flex-1"
-                    >
-                      <Type className="mr-1.5 h-3.5 w-3.5" />
-                      长文章
-                    </Button>
-                    <Button
-                      variant={type === PostType.SHORT ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setType(PostType.SHORT)}
-                      className="flex-1"
-                    >
-                      说说
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
 
                 {/* Slug */}
                 <div>
