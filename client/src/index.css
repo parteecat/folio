@@ -3,153 +3,158 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-  }
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 222.2 84% 4.9%;
+        --radius: 0.5rem;
+    }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+    }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
 }
 
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.5);
 }
 
 /* 平滑滚动 */
 html {
-  scroll-behavior: smooth;
+    scroll-behavior: smooth;
 }
 
 /* 代码块样式 - GitHub Dark 主题 */
 /* 使用 !important 确保覆盖 prose 样式 */
-pre, .prose pre {
-  position: relative !important;
-  margin: 1.5em 0 !important;
-  padding: 1.25em !important;
-  background: #0d1117 !important;
-  border-radius: 0.75rem !important;
-  overflow-x: auto !important;
-  border: 1px solid #30363d !important;
-  color: #c9d1d9 !important;
+pre,
+.prose pre {
+    position: relative !important;
+    margin: 1.5em 0 !important;
+    padding: 1.25em !important;
+    background: #0d1117 !important;
+    border-radius: 0.75rem !important;
+    overflow-x: auto !important;
+    border: 1px solid #30363d !important;
+    color: #c9d1d9 !important;
 }
 
-pre code, .prose pre code {
-  display: block !important;
-  padding: 0 !important;
-  background: transparent !important;
-  font-size: 0.875rem !important;
-  line-height: 1.7 !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
-  color: #c9d1d9 !important;
-  border: none !important;
+pre code,
+.prose pre code {
+    display: block !important;
+    padding: 0 !important;
+    background: transparent !important;
+    font-size: 0.875rem !important;
+    line-height: 1.7 !important;
+    font-family:
+        "JetBrains Mono", "Fira Code", "Consolas", monospace !important;
+    color: #c9d1d9 !important;
+    border: none !important;
 }
 
 /* 行内代码样式 */
-code, .prose code {
-  padding: 0.2em 0.4em;
-  background: rgba(175, 184, 193, 0.2);
-  border-radius: 0.25em;
-  font-size: 0.875em;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  color: #24292f;
+code,
+.prose code {
+    padding: 0.2em 0.4em;
+    background: rgba(175, 184, 193, 0.2);
+    border-radius: 0.25em;
+    font-size: 0.875em;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    color: #24292f;
 }
 
-pre code, .prose pre code {
-  padding: 0 !important;
-  background: transparent !important;
-  color: #c9d1d9 !important;
-  border: none !important;
+pre code,
+.prose pre code {
+    padding: 0 !important;
+    background: transparent !important;
+    color: #c9d1d9 !important;
+    border: none !important;
 }
 
 /* 语法高亮 - GitHub Dark 主题 */
 .hljs {
-  display: block;
-  overflow-x: auto;
-  padding: 0;
-  color: #c9d1d9;
-  background: transparent;
+    display: block;
+    overflow-x: auto;
+    padding: 0;
+    color: #c9d1d9;
+    background: transparent;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-subst {
-  color: #ff7b72;
-  font-weight: normal;
+    color: #ff7b72;
+    font-weight: normal;
 }
 
 .hljs-string,
 .hljs-doctag,
 .hljs-regexp {
-  color: #a5d6ff;
+    color: #a5d6ff;
 }
 
 .hljs-title,
 .hljs-section,
 .hljs-built_in,
 .hljs-name {
-  color: #d2a8ff;
+    color: #d2a8ff;
 }
 
 .hljs-number,
@@ -157,119 +162,120 @@ pre code, .prose pre code {
 .hljs-variable,
 .hljs-template-variable,
 .hljs-tag .hljs-attr {
-  color: #79c0ff;
+    color: #79c0ff;
 }
 
 .hljs-comment,
 .hljs-quote {
-  color: #8b949e;
-  font-style: normal;
+    color: #8b949e;
+    font-style: normal;
 }
 
 .hljs-meta {
-  color: #d2a8ff;
+    color: #d2a8ff;
 }
 
 .hljs-function {
-  color: #d2a8ff;
+    color: #d2a8ff;
 }
 
 .hljs-params {
-  color: #c9d1d9;
+    color: #c9d1d9;
 }
 
 .hljs-class {
-  color: #ffa657;
+    color: #ffa657;
 }
 
 .hljs-property {
-  color: #79c0ff;
+    color: #79c0ff;
 }
 
 .hljs-operator {
-  color: #ff7b72;
+    color: #ff7b72;
 }
 
 .hljs-punctuation {
-  color: #c9d1d9;
+    color: #c9d1d9;
 }
 
 .hljs-tag {
-  color: #7ee787;
+    color: #7ee787;
 }
 
 .hljs-attr {
-  color: #79c0ff;
+    color: #79c0ff;
 }
 
 /* 任务列表样式 */
 ul[data-type="taskList"] {
-  list-style: none;
-  padding: 0;
+    list-style: none;
+    padding: 0;
 }
 
 ul[data-type="taskList"] li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5em;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
 }
 
 ul[data-type="taskList"] li > label {
-  margin-top: 0.25em;
+    margin-top: 0.65em;
 }
 
 ul[data-type="taskList"] li > div {
-  flex: 1;
+    flex: 1;
 }
 
 /* 编辑器占位符 */
 .is-editor-empty::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: hsl(var(--muted-foreground));
-  pointer-events: none;
-  height: 0;
+    content: attr(data-placeholder);
+    float: left;
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+    height: 0;
 }
 
 /* 编辑器中的代码块样式 */
 .ProseMirror pre {
-  background: #0d1117 !important;
-  color: #c9d1d9 !important;
-  border: 1px solid #30363d !important;
-  border-radius: 0.75rem !important;
-  padding: 1rem !important;
+    background: #0d1117 !important;
+    color: #c9d1d9 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 0.75rem !important;
+    padding: 1rem !important;
 }
 
 .ProseMirror pre code {
-  background: transparent !important;
-  color: #c9d1d9 !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+    background: transparent !important;
+    color: #c9d1d9 !important;
+    font-family:
+        "JetBrains Mono", "Fira Code", "Consolas", monospace !important;
 }
 
 /* 代码块复制按钮 - 适配深色主题 */
 pre:hover .copy-code-btn {
-  opacity: 1;
+    opacity: 1;
 }
 
 .copy-code-btn {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid #30363d;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  color: #c9d1d9;
-  cursor: pointer;
-  opacity: 0;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #30363d;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    color: #c9d1d9;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .copy-code-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #8b949e;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #8b949e;
 }
