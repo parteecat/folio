@@ -92,6 +92,7 @@ model Post {
   publishedAt  DateTime?
   likeCount    Int      @default(0)
   viewCount    Int      @default(0)
+  hidden       Boolean  @default(false) // 隐藏后不在主页 feed 显示
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
