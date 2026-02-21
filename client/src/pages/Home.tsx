@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { Menu, Plus } from 'lucide-react'
+import { Menu, Plus, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThreeColumnLayout } from '@/components/layout/ThreeColumnLayout'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
@@ -201,14 +201,22 @@ export default function Home() {
 
       {/* 发说说按钮（登录后显示） */}
       {isAuthenticated && (
-        <div className="border-b p-4">
+        <div className="border-b p-4 space-y-2">
           <Button
             variant="outline"
             className="w-full justify-start gap-2 text-muted-foreground"
             onClick={() => setShuoModalOpen(true)}
           >
+            <MessageSquare className="h-4 w-4" />
+            发说说...
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => window.location.href = '/admin/editor'}
+          >
             <Plus className="h-4 w-4" />
-            分享新鲜事...
+            新建文章...
           </Button>
         </div>
       )}
