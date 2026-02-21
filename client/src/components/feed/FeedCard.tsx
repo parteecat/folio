@@ -1,8 +1,14 @@
 import { NavLink } from 'react-router-dom'
-import { ArrowRight, Pencil } from 'lucide-react'
+import { ArrowRight, Pencil, MoreVertical, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { formatRelativeTime } from '@/lib/utils'
 import { ShuoAttachmentGrid } from './ShuoPostModal'
 import { LikeButton } from './LikeButton'
@@ -13,6 +19,8 @@ interface FeedCardProps {
   post: PostListItem
   onLike?: (id: string) => void
   onEdit?: (post: PostListItem) => void
+  onDelete?: (post: PostListItem) => void
+  onToggleHide?: (post: PostListItem) => void
 }
 
 /**
@@ -20,7 +28,7 @@ interface FeedCardProps {
  * 类似朋友圈/QQ空间说说样式
  * 支持九宫格图片、视频、GIF
  */
-function ShortCard({ post, onLike, onEdit }: FeedCardProps) {
+function ShortCard({ post, onLike, onEdit, onDelete, onToggleHide }: FeedCardProps) {
   const { isAuthenticated } = useAuthStore()
 
   // 转换attachments格式
@@ -32,9 +40,14 @@ function ShortCard({ post, onLike, onEdit }: FeedCardProps) {
         url,
       }))
 
+  // 预览说说
+  const handlePreview = () => {
+    window.open(`/post/${post.slug}`, '_blank')
+  }
+
   return (
     <article className="border-b p-4 transition-colors hover:bg-muted/50">
-      {/* 作者信息 */}
+      {/* 作者信息 + 右上角操作菜单 */}
       <div className="mb-3 flex items-center gap-2">
         <Avatar className="h-8 w-8">
           <AvatarImage src={post.author?.avatar || undefined} />
@@ -46,6 +59,57 @@ function ShortCard({ post, onLike, onEdit }: FeedCardProps) {
             {formatRelativeTime(post.publishedAt || new Date().toISOString())}
           </p>
         </div>
+        
+        {/* 右上角操作菜单（仅管理员可见） */}
+        {isAuthenticated && (onEdit || onDelete || onToggleHide) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handlePreview}>
+                <Eye className="mr-2 h-4 w-4" />
+                预览
+              </DropdownMenuItem>
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(post)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  编辑
+                </DropdownMenuItem>
+              )}
+              {onToggleHide && (
+                <DropdownMenuItem onClick={() => onToggleHide(post)}>
+                  {post.hidden ? (
+                    <>
+                      <Eye className="mr-2 h-4 w-4" />
+                      显示
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="mr-2 h-4 w-4" />
+                      隐藏
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={() => onDelete(post)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  删除
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* 内容 - 渲染HTML */}
@@ -83,22 +147,9 @@ function ShortCard({ post, onLike, onEdit }: FeedCardProps) {
           initialCount={post.likeCount} 
           onLike={onLike}
         />
-        <div className="flex items-center gap-2">
-          {isAuthenticated && onEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"
-              onClick={() => onEdit(post)}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              编辑
-            </Button>
-          )}
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            说说
-          </span>
-        </div>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+          说说
+        </span>
       </div>
     </article>
   )
@@ -181,9 +232,9 @@ function ArticleCard({ post }: { post: PostListItem }) {
  * Feed卡片组件
  * 根据帖子类型渲染不同的卡片样式
  */
-export function FeedCard({ post, onLike, onEdit }: FeedCardProps) {
+export function FeedCard({ post, onLike, onEdit, onDelete, onToggleHide }: FeedCardProps) {
   return post.type === 'SHORT' ? (
-    <ShortCard post={post} onLike={onLike} onEdit={onEdit} />
+    <ShortCard post={post} onLike={onLike} onEdit={onEdit} onDelete={onDelete} onToggleHide={onToggleHide} />
   ) : (
     <ArticleCard post={post} />
   )

@@ -10,12 +10,10 @@ interface FeedListProps {
   onLoadMore: () => void
   onLike?: (id: string) => void
   onEdit?: (post: PostListItem) => void
+  onDelete?: (post: PostListItem) => void
+  onToggleHide?: (post: PostListItem) => void
 }
 
-/**
- * Feed列表组件
- * 渲染帖子列表，支持无限滚动
- */
 export function FeedList({
   posts,
   isLoading,
@@ -23,6 +21,8 @@ export function FeedList({
   onLoadMore,
   onLike,
   onEdit,
+  onDelete,
+  onToggleHide,
 }: FeedListProps) {
   const { loadMoreRef } = useInfiniteScroll({
     onLoadMore,
@@ -47,7 +47,14 @@ export function FeedList({
   return (
     <div className="divide-y">
       {posts.map((post) => (
-        <FeedCard key={post.id} post={post} onLike={onLike} onEdit={onEdit} />
+        <FeedCard 
+          key={post.id} 
+          post={post} 
+          onLike={onLike} 
+          onEdit={onEdit} 
+          onDelete={onDelete}
+          onToggleHide={onToggleHide}
+        />
       ))}
 
       {/* 加载指示器 */}
