@@ -233,14 +233,16 @@ export const api = {
 
   // 管理
   admin: {
-    getPosts: (): Promise<PostListItem[]> =>
-      apiClient.get('/api/admin/posts'),
+    getPosts: (type?: 'SHORT' | 'ARTICLE'): Promise<PostListItem[]> =>
+      apiClient.get('/api/admin/posts', type ? { type } : undefined),
     createPost: (data: unknown) =>
       apiClient.post('/api/admin/posts', data),
     updatePost: (id: string, data: unknown) =>
       apiClient.put(`/api/admin/posts/${id}`, data),
     deletePost: (id: string) =>
       apiClient.delete(`/api/admin/posts/${id}`),
+    hidePost: (id: string, hidden: boolean) =>
+      apiClient.post(`/api/admin/posts/${id}/hide`, { hidden }),
     getStats: (): Promise<Stats> =>
       apiClient.get('/api/admin/stats'),
   },
