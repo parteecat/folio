@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Tags, Eye, Heart, Plus, Settings } from 'lucide-react'
+import { FileText, Tags, Eye, Heart, Plus, Settings, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/api/client'
@@ -95,6 +95,22 @@ export default function AdminDashboard() {
 
         {/* 快捷入口 */}
         <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">说说管理</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate('/admin/shuos')}
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                说说列表
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">文章管理</CardTitle>
