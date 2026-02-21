@@ -16,6 +16,7 @@ import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
 import css from 'highlight.js/lib/languages/css'
 import markdown from 'highlight.js/lib/languages/markdown'
+import yaml from 'highlight.js/lib/languages/yaml'
 import 'highlight.js/styles/github-dark.css'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -45,6 +46,33 @@ hljs.registerLanguage('json', json)
 hljs.registerLanguage('xml', xml)
 hljs.registerLanguage('css', css)
 hljs.registerLanguage('markdown', markdown)
+hljs.registerLanguage('yaml', yaml)
+
+const LANGUAGE_ALIAS_MAP: Record<string, string> = {
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  shell: 'bash',
+  sh: 'bash',
+  zsh: 'bash',
+  yml: 'yaml',
+  md: 'markdown',
+}
+
+function resolveLanguage(input: string): string | null {
+  const normalized = input.trim().toLowerCase()
+  if (!normalized) return null
+
+  const match = normalized.match(/(?:language|lang)-([a-z0-9_+#.+-]+)/)
+  if (match) {
+    const candidate = LANGUAGE_ALIAS_MAP[match[1]] || match[1]
+    return hljs.getLanguage(candidate) ? candidate : null
+  }
+
+  const direct = LANGUAGE_ALIAS_MAP[normalized] || normalized
+  return hljs.getLanguage(direct) ? direct : null
+}
 
 /**
  * 文章内容渲染组件
@@ -63,6 +91,10 @@ function PostContent({
     const content = contentRef.current
     if (!content || !html) return
 
+    let frameId: number | null = null
+    let retryTimer: number | null = null
+    let observer: MutationObserver | null = null
+
     const applyHighlighting = () => {
       const images = content.querySelectorAll('img')
       images.forEach((img) => {
@@ -76,16 +108,39 @@ function PostContent({
         if (!codeElement) return
 
         const code = codeElement.textContent || ''
-        const className = codeElement.className || ''
-        const langMatch = className.match(/language-(\w+)/)
-        const language = langMatch ? langMatch[1] : 'plaintext'
+        if (!code.trim()) return
+
+        const className = `${pre.className || ''} ${codeElement.className || ''}`
+        const dataLanguage = pre.getAttribute('data-language') || codeElement.getAttribute('data-language') || ''
+        const language = resolveLanguage(className) || resolveLanguage(dataLanguage)
+        const signature = `${language || 'auto'}::${code}`
+
+        if (codeElement.getAttribute('data-folio-highlighted-signature') === signature) {
+          return
+        }
 
         try {
-          const result = hljs.highlight(code, { language, ignoreIllegals: true })
+          const result =
+            language
+              ? hljs.highlight(code, { language, ignoreIllegals: true })
+              : hljs.highlightAuto(code)
+
           codeElement.innerHTML = result.value
-          codeElement.className = `hljs language-${language}`
+          const detectedLanguage = result.language || language || 'plaintext'
+          const preserved = (codeElement.className || '')
+            .split(/\s+/)
+            .filter((cls) =>
+              cls &&
+              cls !== 'hljs' &&
+              !cls.startsWith('language-') &&
+              !cls.startsWith('lang-')
+            )
+          codeElement.className = [...preserved, 'hljs', `language-${detectedLanguage}`].join(' ')
+          codeElement.setAttribute('data-folio-highlighted-signature', signature)
         } catch {
-          codeElement.className = `hljs language-plaintext`
+          codeElement.textContent = code
+          codeElement.className = 'hljs language-plaintext'
+          codeElement.setAttribute('data-folio-highlighted-signature', signature)
         }
 
         if (!pre.querySelector('.copy-code-btn')) {
@@ -115,7 +170,8 @@ function PostContent({
             <span>复制</span>
           `
           button.onclick = async () => {
-            await navigator.clipboard.writeText(code)
+            const latestCode = pre.querySelector('code')?.textContent || code
+            await navigator.clipboard.writeText(latestCode)
             button.innerHTML = `
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               <span>已复制</span>
@@ -138,8 +194,42 @@ function PostContent({
       })
     }
 
-    const timer = setTimeout(applyHighlighting, 0)
-    return () => clearTimeout(timer)
+    const scheduleApplyHighlighting = () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      frameId = requestAnimationFrame(() => {
+        applyHighlighting()
+        frameId = null
+      })
+    }
+
+    applyHighlighting()
+    scheduleApplyHighlighting()
+    retryTimer = window.setTimeout(scheduleApplyHighlighting, 120)
+
+    observer = new MutationObserver(() => {
+      scheduleApplyHighlighting()
+    })
+
+    observer.observe(content, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-language'],
+    })
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      if (retryTimer !== null) {
+        clearTimeout(retryTimer)
+      }
+      if (observer) {
+        observer.disconnect()
+      }
+    }
   }, [html, contentRef, onImageClick])
 
   return (

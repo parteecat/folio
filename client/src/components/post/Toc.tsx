@@ -23,6 +23,14 @@ export function Toc({ contentRef, html }: TocProps) {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const visibleIdsRef = useRef<Set<string>>(new Set())
 
+  const findHeadingById = useCallback((container: HTMLElement, id: string) => {
+    const element = container.ownerDocument.getElementById(id)
+    if (element && container.contains(element)) {
+      return element
+    }
+    return null
+  }, [])
+
   // 提取标题并生成 id
   useEffect(() => {
     const content = contentRef.current
@@ -89,7 +97,7 @@ export function Toc({ contentRef, html }: TocProps) {
         let topmostY = Infinity
 
         visibleIdsRef.current.forEach((id) => {
-          const heading = content.querySelector(`#${id}`)
+          const heading = findHeadingById(content, id)
           if (heading) {
             const rect = heading.getBoundingClientRect()
             if (rect.top < topmostY) {
@@ -134,7 +142,7 @@ export function Toc({ contentRef, html }: TocProps) {
 
     // 观察所有标题
     items.forEach((item) => {
-      const heading = content.querySelector(`#${item.id}`)
+      const heading = findHeadingById(content, item.id)
       if (heading && observerRef.current) {
         observerRef.current.observe(heading)
       }
@@ -146,7 +154,7 @@ export function Toc({ contentRef, html }: TocProps) {
       }
       window.removeEventListener('scroll', handleScroll)
     }
-  }, [contentRef, items])
+  }, [contentRef, findHeadingById, items])
 
   // 点击平滑滚动
   const handleClick = useCallback((id: string) => {
